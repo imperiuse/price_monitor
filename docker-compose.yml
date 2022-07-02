@@ -1,0 +1,65 @@
+version: '3'
+
+volumes:
+  pm-timescaledb-data: { }
+
+services:
+  pm-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - GOLANG_IMAGE=${GOLANG_IMAGE}
+        - ALPINE_IMAGE=${ALPINE_IMAGE}
+        - APP_NAME=${APP_NAME}
+        - APP_VERSION=${APP_VERSION}
+        - APP_ENV=prod
+    environment:
+      - POSTGRES_USER=${PM_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${PM_POSTGRES_PASSWORD}
+    networks:
+      - pm-network
+    depends_on:
+      - pm-timescaledb
+      - pm-consul
+    entrypoint: ./price_monitor
+    expose:
+      - "8080" # NB! https://pspdfkit.com/blog/2018/how-to-use-docker-compose-to-run-multiple-instances-of-a-service-in-development/
+
+  pm-nginx-reverse-proxy:
+    image: nginx
+    networks:
+      - pm-network
+    volumes:
+      - ./.docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - pm-app
+    ports:
+      - "4000:4000"
+
+  pm-timescaledb:
+    image: timescale/timescaledb-ha:pg14-latest
+    networks:
+      - pm-network
+    container_name: pm-timescale-db
+    environment:
+      - POSTGRES_USER=${PM_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${PM_POSTGRES_PASSWORD}
+#    ports: #host_port : docker_port
+#      - "5432:5432"
+    volumes:
+      - pm-timescaledb-data:/var/lib/postgresql/data
+
+  pm-consul:
+    image: consul:1.9
+    networks:
+      - pm-network
+    container_name: consul
+    command: "agent -dev -bind=0.0.0.0 -client=0.0.0.0 -server -ui -bootstrap -config-file=/config/consul.json -enable-script-checks"
+    ports: #host_port : docker_port
+      - "8500:8500"
+    volumes:
+      - ./consul.json/:/config/consul.json
+
+networks:
+  pm-network: {}

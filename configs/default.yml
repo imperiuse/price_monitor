@@ -1,0 +1,39 @@
+logger:
+  level: info
+  encoding: json
+  color: false
+  outputs:
+    - stdout
+  tags:
+
+consul:
+  address: 127.0.0.1:8500
+  interval: 2s
+  timeout: 250ms
+  tags:
+    - pm
+  dns:
+    - "8.8.8.8:80"
+  sessionTTL: 30s
+  periodicScanTimeout: 10s
+  waitTimeout: 30m
+
+api:
+  name: pm-http-api
+  address: :8080
+  domainName: localhost
+  allowOrigin: "*"
+  timeouts:
+    readTimeout: "60s"
+    writeTimeout: "60s"
+
+storage:
+  consul_leader_key_prefix: "service/price_monitor/leader"
+  consul_slave_list_key_prefix: "service/price_monitor/slaves"
+  host: "127.0.0.1"
+  port: 5432
+  database: pm
+  options:
+    maxLifeTime: 600
+    maxIdleConn: 10
+    maxOpenConn: 10

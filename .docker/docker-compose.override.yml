@@ -1,0 +1,32 @@
+version: '3'
+
+volumes:
+  pm-dev-timescaledb-data: { }
+
+services:
+  pm-dev-timescaledb:
+    image: timescale/timescaledb-ha:pg14-latest
+    networks:
+      - pm-dev-network
+    container_name: pm-timescale-db
+    environment:
+      - POSTGRES_USER=${PM_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${PM_POSTGRES_PASSWORD}
+    ports: #host_port : docker_port
+      - "5432:5432"
+    volumes:
+      - pm-dev-timescaledb-data:/var/lib/postgresql/data
+
+  pm-dev-consul:
+    image: consul:1.9
+    networks:
+      - pm-dev-network
+    container_name: consul
+    command: "agent -dev -bind=0.0.0.0 -client=0.0.0.0 -server -ui -bootstrap -config-file=/config/consul.json -enable-script-checks"
+    ports: #host_port : docker_port
+      - "8500:8500"
+    volumes:
+      - ./consul.json/:/config/consul.json
+
+networks:
+  pm-dev-network: {}

@@ -49,7 +49,7 @@ From root of the repository:
 
 2) Start monitoring
 
-    ```curl --request POST --url http://localhost:4000/api/v1/monitoring?period=1m&freq=10s```
+    ```curl --request POST --url http://localhost:4000/api/v1/monitoring?cur=btcusd&period=1m&freq=10s```
 
 3) Get results of monitoring 
 

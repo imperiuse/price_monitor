@@ -37,12 +37,17 @@ func SendJSON(ctx *gin.Context, status int, response HTTPGoodResponse) {
 
 // SendErrorJSON - send error data in json format with status AND Abort gin ctx.
 func SendErrorJSON(ctx *gin.Context, status int, desc string, err error) {
+	var errStr = ""
+	if err != nil {
+		errStr = err.Error()
+	}
+
 	ctx.JSON(status, HTTPErrorResponse{
 		Time:   time.Now().UTC().Unix(),
 		UUID:   helper.FromContextGetUUID(ctx),
 		Status: status,
 		Desc:   desc,
-		Err:    err.Error(),
+		Err:    errStr,
 	})
 
 	ctx.Abort()

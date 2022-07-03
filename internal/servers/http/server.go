@@ -118,6 +118,7 @@ func New(
 	// Server's check handlers
 	// todo metrics middleware -> mw.MetricsRPC("health", Health))
 	e.GET("/health", Health)
+	e.GET("/ready", Readiness)
 
 	// Add a ginzap middleware, which:
 	//   - Logs all requests, like a combined access and error log.

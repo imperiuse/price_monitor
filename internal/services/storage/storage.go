@@ -88,6 +88,12 @@ type (
 
 	// Eq - alias squirell.Eq
 	Eq = squirrel.Eq
+	// And - and pred.
+	And = squirrel.And
+	// Lt - and pred.
+	Lt = squirrel.Lt
+	// Gt - and pred.
+	Gt = squirrel.Gt
 
 	// CursorPaginationParams alias of CursorPaginationParams.
 	CursorPaginationParams = db.CursorPaginationParams

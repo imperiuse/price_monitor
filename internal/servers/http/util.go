@@ -1,4 +1,4 @@
-package util
+package http
 
 import (
 	"time"
@@ -8,14 +8,13 @@ import (
 	"github.com/imperiuse/price_monitor/internal/helper"
 )
 
-const HTTPStatusOk = "OK"
-
 // HTTPGoodResponse - http good api response.
 type HTTPGoodResponse struct {
 	xxxNoUnKeyLiteral [0]int // nolint
 	Time              int64  `json:"time,omitempty"`
 	UUID              string `json:"uuid,omitempty"`
-	Status            string `json:"status,omitempty"`
+	NodeID            string `json:"node_id,omitempty"`
+	Status            int    `json:"status,omitempty"`
 	Description       string `json:"description,omitempty"`
 	gin.H
 }
@@ -25,18 +24,26 @@ type HTTPErrorResponse struct {
 	xxxNoUnKeyLiteral [0]int // nolint
 	Time              int64  `json:"time,omitempty"`
 	UUID              string `json:"uuid,omitempty"`
+	NodeID            string `json:"node_id,omitempty"`
 	Status            int    `json:"status,omitempty"`
 	Desc              string `json:"desc" example:"some human readable desc"`
 	Err               string `json:"err" example:"internal server error"`
 }
 
-// SendJSON - send error data in json format with status AND Abort gin ctx.
-func SendJSON(ctx *gin.Context, status int, response HTTPGoodResponse) {
-	ctx.JSON(status, response)
+// SendJSON - send json (good response)
+func (s *Server) SendJSON(ctx *gin.Context, status int, desc string, h gin.H) {
+	ctx.JSON(status, HTTPGoodResponse{
+		Time:        time.Now().UTC().Unix(),
+		UUID:        helper.FromContextGetUUID(ctx),
+		NodeID:      s.config.NodeID,
+		Status:      status,
+		Description: desc,
+		H:           h,
+	})
 }
 
 // SendErrorJSON - send error data in json format with status AND Abort gin ctx.
-func SendErrorJSON(ctx *gin.Context, status int, desc string, err error) {
+func (s *Server) SendErrorJSON(ctx *gin.Context, status int, desc string, err error) {
 	var errStr = ""
 	if err != nil {
 		errStr = err.Error()
@@ -45,6 +52,7 @@ func SendErrorJSON(ctx *gin.Context, status int, desc string, err error) {
 	ctx.JSON(status, HTTPErrorResponse{
 		Time:   time.Now().UTC().Unix(),
 		UUID:   helper.FromContextGetUUID(ctx),
+		NodeID: s.config.NodeID,
 		Status: status,
 		Desc:   desc,
 		Err:    errStr,

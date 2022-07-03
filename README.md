@@ -53,19 +53,27 @@ From root of the repository:
 2) Start monitoring
 
     ```curl --request POST --url http://localhost:4000/api/v1/monitoring?cur=btcusd&period=1m&freq=10s```
+   ![img](./.img/example_post.png)
+3) ![img](./.img/example_post_2.png)
 
-3) Get results of monitoring 
+4) Get results of monitoring 
 
     ```curl --request GET --url http://localhost:4000/api/v1/monitoring/1```
+
+![img](./.img/example_get.png)
+![img](./.img/example_get_2_not_ready.png)
+![img](./.img/example_get_3.png)
+
+Optional:
+
+4) Get result monitoring and delete monitoring record from db 
+
+    ```curl --request GET --url http://localhost:4000/api/v1/monitoring/1?delete=true```
 
 
 #### Insomnia examples:
 
 see in folder -> `.insomnia`
-
-![img](./.img/example_post.png)
-![img](./.img/example_get.png)
-
 
 #### Docker Compose run
 
@@ -88,7 +96,7 @@ see in folder -> `.insomnia`
 
 #### Env up
 
-   make dev_env_up
+    make dev_env_up
 
 After that can run go app (in JetBrains IDE or VSCode) (do not forget set up .env file and add ENVs)
 
@@ -97,11 +105,11 @@ After that can run go app (in JetBrains IDE or VSCode) (do not forget set up .en
    
 #### Remove old container or volumes
 
-   make docker_clean_all
+    make docker_clean_all
    
 #### Rebuild prod app container
 
-   make rebuild
+    make rebuild
    
 Made by Arseny Sazanov 2022
 

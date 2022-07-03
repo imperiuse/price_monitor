@@ -51,6 +51,7 @@ func New(appName string, envName env.Var, configPath string, nodeName string) (C
 	applyEnvOnConfig(&cfg, appName)
 
 	cfg.Servers.HTTP.Name += "_" + nodeName
+	cfg.Servers.HTTP.NodeID = nodeName
 
 	// show config for debug purposes
 	// nolint forbidigo // exception of rule )

@@ -26,6 +26,7 @@ type (
 	// Config - config struct.
 	Config struct {
 		Name        string
+		NodeID      string
 		Address     string
 		DomainName  string `yaml:"domainName"`
 		AllowOrigin string `yaml:"allowOrigin"`
@@ -117,8 +118,8 @@ func New(
 
 	// Server's check handlers
 	// todo metrics middleware -> mw.MetricsRPC("health", Health))
-	e.GET("/health", Health)
-	e.GET("/ready", Readiness)
+	e.GET("/health", s.Health)
+	e.GET("/ready", s.Readiness)
 
 	// Add a ginzap middleware, which:
 	//   - Logs all requests, like a combined access and error log.

@@ -13,7 +13,6 @@ import (
 	"github.com/imperiuse/price_monitor/internal/helper"
 	"github.com/imperiuse/price_monitor/internal/logger/field"
 	mw "github.com/imperiuse/price_monitor/internal/servers/http/middlerware"
-	"github.com/imperiuse/price_monitor/internal/servers/http/util"
 	"github.com/imperiuse/price_monitor/internal/services/storage"
 	"github.com/imperiuse/price_monitor/internal/services/storage/model"
 )
@@ -23,12 +22,13 @@ const defaultLimit = 10000
 type (
 	FormGetMonitoring struct {
 		ID     int64  `uri:"id" binding:"required,min=1,max=9223372036854775807"`
+		Delete bool   `form:"delete"  binding:"omitempty"`
 		Cursor uint64 `form:"cursor"  binding:"omitempty,min=0,max=18446744073709551615"`
 		Limit  uint64 `form:"limit"  binding:"omitempty,min=1,max=10000"`
 	}
 
 	FormPostMonitoring struct {
-		// TODO ALSO CAN BE LIKE HERE
+		// TODO ALSO CAN BE LIKE HERE (I decide to go straightforward, simple and utility)
 		//FromTime  time.Time `form:"from" binding:"required" time_format:"2006-01-02T15:04:05" time_utc:"0"` // time.RFC3339
 		//ToTime    time.Time `form:"to" binding:"required" time_format:"2006-01-02T15:04:05" time_utc:"0"`   // time.RFC3339
 
@@ -52,8 +52,8 @@ type (
 // @Produce  json
 // @Success 200
 // @Router /health [get]
-func Health(c *gin.Context) {
-	c.String(http.StatusOK, "")
+func (s *Server) Health(c *gin.Context) {
+	c.String(http.StatusOK, `{"NodeID": %s}`, s.config.NodeID)
 }
 
 // Readiness godoc
@@ -65,8 +65,8 @@ func Health(c *gin.Context) {
 // @Produce  json
 // @Success 200
 // @Router /ready [get]
-func Readiness(c *gin.Context) {
-	c.String(http.StatusOK, "ready")
+func (s *Server) Readiness(c *gin.Context) {
+	c.String(http.StatusOK, `{"NodeID": %s}`, s.config.NodeID)
 }
 
 // GetMonitoring godoc
@@ -75,6 +75,7 @@ func Readiness(c *gin.Context) {
 // @Id GetMonitoring
 // @Tags Server API
 // @Param id path int true "id of road controller"
+// @Param delete query bool false "delete monitoring after"
 // @Param cursor query int false "cursor for cursor pagination"
 // @Param limit query int false "limit for limit pagination"// todo https://uxdesign.cc/why-facebook-says-cursor-pagination-is-the-greatest-d6b98d86b6c0
 // @Accept  json
@@ -93,14 +94,14 @@ func (s *Server) GetMonitoring(c *gin.Context) { // TODO  toooo-looong func need
 	f := FormGetMonitoring{}
 	if err := c.ShouldBindUri(&f); err != nil {
 		s.log.Error("can not parse params (uri)", field.ID(f.ID), field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusBadRequest, "can not parse params (uri)", err)
+		s.SendErrorJSON(c, http.StatusBadRequest, "can not parse params (uri)", err)
 
 		return
 	}
 
 	if err := c.ShouldBindQuery(&f); err != nil {
 		s.log.Error("can not parse params (query)", field.ID(f.ID), field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusBadRequest, "can not parse params (query)", err)
+		s.SendErrorJSON(c, http.StatusBadRequest, "can not parse params (query)", err)
 
 		return
 	}
@@ -114,20 +115,20 @@ func (s *Server) GetMonitoring(c *gin.Context) { // TODO  toooo-looong func need
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			s.log.Debug("not found monitoring obj with id", field.ID(f.ID))
-			util.SendErrorJSON(c, http.StatusNotFound, "no monitoring obj with that id", nil)
+			s.SendErrorJSON(c, http.StatusNotFound, "no monitoring obj with that id", nil)
 
 			return
 		}
 
 		s.log.Error("can not get data for monitoring from db", field.ID(f.ID), field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusInternalServerError, "can not get data for monitoring from db", err)
+		s.SendErrorJSON(c, http.StatusInternalServerError, "can not get data for monitoring from db", err)
 
 		return
 	}
 
 	if time.Now().UTC().Before(m.ExpiredAt) {
 		s.log.Debug("monitoring has not finished yet", field.Any("form", f), field.ID(f.ID))
-		util.SendErrorJSON(c, http.StatusAccepted, "monitoring has not finished yet", nil)
+		s.SendErrorJSON(c, http.StatusAccepted, "monitoring has not finished yet", nil)
 
 		return
 	}
@@ -135,7 +136,7 @@ func (s *Server) GetMonitoring(c *gin.Context) { // TODO  toooo-looong func need
 	curCode, err := s.getCurrencyCodeById(ctx, m.CurrencyID)
 	if err != nil {
 		s.log.Debug("not found currency code by code id", field.Any("m", m), field.ID(f.ID))
-		util.SendErrorJSON(c, http.StatusInternalServerError, "not found currency code by code id", nil)
+		s.SendErrorJSON(c, http.StatusInternalServerError, "not found currency code by code id", nil)
 
 		return
 	}
@@ -143,7 +144,7 @@ func (s *Server) GetMonitoring(c *gin.Context) { // TODO  toooo-looong func need
 	freq, err := time.ParseDuration(m.Frequency)
 	if err != nil {
 		s.log.Error("bad value for frequency from db", field.ID(f.ID), field.Any("m", m), field.Error(err))
-		util.SendErrorJSON(c, http.StatusInternalServerError, "bad value for frequency from db ", err)
+		s.SendErrorJSON(c, http.StatusInternalServerError, "bad value for frequency from db ", err)
 
 		return
 	}
@@ -162,7 +163,7 @@ func (s *Server) GetMonitoring(c *gin.Context) { // TODO  toooo-looong func need
 	if err != nil {
 		s.log.Error("can not get prices data for monitoring",
 			field.ID(f.ID), field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusInternalServerError, "can not get prices data for monitoring", err)
+		s.SendErrorJSON(c, http.StatusInternalServerError, "can not get prices data for monitoring", err)
 
 		return
 	}
@@ -174,21 +175,20 @@ func (s *Server) GetMonitoring(c *gin.Context) { // TODO  toooo-looong func need
 	prices = applyFreqFilter(prices, freq)
 
 	// TODO optional we can delete monitoring with that ID  (auto clean table, good idea imho)
-	//_, err = s.storage.Connector().Repo(m).Delete(ctx, f.ID)
-	//if err != nil {
-	//	s.log.Error("can not deleter monitoring", field.ID(f.ID), field.Any("form", f), field.Error(err))
-	//}
+	if f.Delete {
+		_, err = s.storage.Connector().Repo(m).Delete(ctx, f.ID)
+		if err != nil {
+			s.log.Error("can not deleter monitoring", field.ID(f.ID), field.Any("form", f), field.Error(err))
+		}
+	}
 
-	util.SendJSON(c, http.StatusOK, util.HTTPGoodResponse{
-		Time:        time.Now().UTC().Unix(),
-		UUID:        helper.FromContextGetUUID(ctx),
-		Status:      "Ok",
-		Description: "Result of monitoring (time in UTC)",
-		H: gin.H{
+	s.SendJSON(c, http.StatusOK, "Result of monitoring (time in UTC)",
+		gin.H{
 			"MonitoringID": f.ID,
+			"StartAt":      m.StartedAt,
+			"FinishedAt":   m.ExpiredAt,
 			"Prices":       convertToResponsePrices(prices),
-		},
-	})
+		})
 }
 
 func (s *Server) getCurrencyCodeById(ctx context.Context, id model.Identity) (string, error) {
@@ -263,7 +263,7 @@ func (s *Server) PostMonitoring(c *gin.Context) { // TODO  toooo-looong func nee
 	periodDuration, err := time.ParseDuration(f.Period)
 	if err != nil {
 		s.log.Error("bad value for period", field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusBadRequest, "bad value for period", err)
+		s.SendErrorJSON(c, http.StatusBadRequest, "bad value for period", err)
 
 		return
 	}
@@ -271,14 +271,14 @@ func (s *Server) PostMonitoring(c *gin.Context) { // TODO  toooo-looong func nee
 	freqDur, err := time.ParseDuration(f.Frequency)
 	if err != nil {
 		s.log.Error("bad value for frequncy", field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusBadRequest, "bad value for frequency", err)
+		s.SendErrorJSON(c, http.StatusBadRequest, "bad value for frequency", err)
 
 		return
 	}
 
 	if f.Period == "" || f.Frequency == "" || f.Currency == "" {
 		s.log.Error("bad value fin form", field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusBadRequest, "bad values in form", err)
+		s.SendErrorJSON(c, http.StatusBadRequest, "bad values in form", err)
 
 		return
 	}
@@ -286,7 +286,7 @@ func (s *Server) PostMonitoring(c *gin.Context) { // TODO  toooo-looong func nee
 	// TODO need clarify this, I add my constraints instead
 	if periodDuration > time.Hour*24 || freqDur < time.Second {
 		s.log.Error("period to much or freq too low", field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusBadRequest, "freqDur", err)
+		s.SendErrorJSON(c, http.StatusBadRequest, "freqDur", err)
 
 		return
 	}
@@ -299,7 +299,8 @@ func (s *Server) PostMonitoring(c *gin.Context) { // TODO  toooo-looong func nee
 	m.CurrencyID, err = s.getCurrencyIdByCurrencyCode(ctx, f.Currency)
 	if err != nil {
 		s.log.Error("can not get data currency data from db", field.Any("form", f), field.Error(err))
-		util.SendErrorJSON(c, http.StatusInternalServerError, "can not get data currency data from db", err)
+		s.SendErrorJSON(c, http.StatusBadRequest, "can not get data currency data from db."+
+			" probably you try to start monitoring unsupported currency", err)
 
 		return
 	}
@@ -307,20 +308,15 @@ func (s *Server) PostMonitoring(c *gin.Context) { // TODO  toooo-looong func nee
 	id, err := s.storage.Connector().Repo(m).Create(ctx, m)
 	if err != nil {
 		s.log.Error("can not create new monitor obj", field.Any("m", m), field.Error(err))
-		util.SendErrorJSON(c, http.StatusInternalServerError, "can not create new monitor obj", err)
+		s.SendErrorJSON(c, http.StatusInternalServerError, "can not create new monitor obj", err)
 
 		return
 	}
 
-	util.SendJSON(c, http.StatusOK, util.HTTPGoodResponse{
-		Time:        time.Now().UTC().Unix(),
-		UUID:        helper.FromContextGetUUID(ctx),
-		Status:      "Ok",
-		Description: "Successfully created new monitoring",
-		H: gin.H{
+	s.SendJSON(c, http.StatusOK, "Successfully created new monitoring",
+		gin.H{
 			"MonitoringID": id,
-		},
-	})
+		})
 
 }
 

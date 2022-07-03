@@ -1,7 +1,7 @@
 logger:
   level: info
-  encoding: json
-  color: false
+  encoding: console
+  color: true
   outputs:
     - stdout
   tags:
@@ -32,7 +32,7 @@ services:
     port: 5432
     database: pm
     maxTryConnect: 3
-    timeoutTryConnect: 5s
+    timeoutTryConnect: "5s"
     options:
       maxLifeTime: 600
       maxIdleConn: 10
@@ -41,10 +41,10 @@ services:
   controllers:
     general:
       monitor:
-        timeoutConsulLeaderCheck: "1s" # TODO define lose 1 second
+        timeoutConsulLeaderCheck: "1s" # TODO define that we can lose 1 second (need discuss!)
 
     master:
       scanner:
-        timeoutOneTaskProcess: "2s" # TODO define max timeout for one task
-        intervalPeriodicScan: "1s" # TODO define max frequency for price scanner
+        timeoutOneTaskProcess: "2s" # TODO define max timeout for one task (need discuss!)
+        intervalPeriodicScan: "1s" # TODO define max frequency for price scanner (need discuss!)
         cntWorkers: 1

@@ -57,8 +57,6 @@ type (
 type HandlerFunc = func(*gin.Context)
 
 const (
-	serviceName = "http"
-
 	apiPath = "/api"
 
 	apiPathVersion1 = apiPath + "/v1"
@@ -138,11 +136,10 @@ func New(
 
 	// TODO OTel (in real world)
 
-	if ev == env.Dev {
-		// TODO profiler and add statsviz  -> (in real world)
-		// TODO Swagger Docs -> (in real world)
-
-	}
+	//if ev == env.Dev {
+	// TODO profiler and add statsviz  -> (in real world)
+	// TODO Swagger Docs -> (in real world)
+	//}
 
 	apiVer := e.Group(apiPathVersion)
 

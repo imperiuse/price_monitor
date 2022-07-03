@@ -137,8 +137,6 @@ func (s *storagePostgres[C]) Close() {
 
 	err := s.purSqlxDB.Close()
 	logger.LogIfError(s.logger, "Err while close master connection", err)
-
-	return
 }
 
 // Refresh - for dev db, refresh tables of db (truncate under the hood).

@@ -7,6 +7,9 @@ sends a request to the service to monitor Bitcoin price for a period of 5 minute
 1. Call the service with period and frequency parameters, which will start monitoring. Returns monitoring ID. A user can start many monitors in parallel without waiting for previous monitors to finish.
 2. Call the service with monitoring ID to check if monitoring is complete and to get results (if monitoring is not finished yet, return some kind of error).
 
+Full task description:
+
+![img](./.img/task_description.png)
 
 ## Solution
 
@@ -56,9 +59,52 @@ From root of the repository:
     ```curl --request GET --url http://localhost:4000/api/v1/monitoring/1```
 
 
-TODOS:
-Refactor a little bit
-1) Implement hexagonal-architecture ->  https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3
-2) Increase test coverage
-3) Add more errors handlers 
-4) 
+#### Insomnia examples:
+
+see in folder -> `.insomnia`
+
+![img](./.img/example_post.png)
+![img](./.img/example_get.png)
+
+
+#### Docker Compose run
+
+![img](./.img/result_running_service_in_docker_compose.png)
+
+# TODOS:
+
+0) Refactor a little (see many todo's)
+1) Full-implementing hexagonal-architecture ->  https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3
+2) Tests-tests-tests -> Increase test coverage (http api tests cases, consul - MUST!)
+3) Add more errors handlers
+4) Think about better sql select where case (select prices)
+5) Add pagination
+6) Add Swagger docs
+7) Implements 2 and 3 variants of architecture =) 
+7.1) Compare them in real world with benchmarks
+
+
+## Development
+
+#### Env up
+
+   make dev_env_up
+
+After that can run go app (in JetBrains IDE or VSCode) (do not forget set up .env file and add ENVs)
+
+![img](./.img/ide_settings_1.png)
+![img](./.img/ide_settings_2.png)
+   
+#### Remove old container or volumes
+
+   make docker_clean_all
+   
+#### Rebuild prod app container
+
+   make rebuild
+   
+Made by Arseny Sazanov 2022
+
+arseny.sazanov@gmail.com
+
+MIT

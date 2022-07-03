@@ -2,18 +2,16 @@ package config
 
 import (
 	"fmt"
-	"path"
-	"strings"
-
 	"github.com/spf13/viper"
 	"go.uber.org/config"
 	"go.uber.org/fx"
+	"path"
 
 	"github.com/imperiuse/price_monitor/internal/consul"
 	"github.com/imperiuse/price_monitor/internal/env"
 	"github.com/imperiuse/price_monitor/internal/logger"
-	"github.com/imperiuse/price_monitor/internal/servers/http"
-	"github.com/imperiuse/price_monitor/internal/storage"
+	"github.com/imperiuse/price_monitor/internal/servers"
+	"github.com/imperiuse/price_monitor/internal/services"
 )
 
 //nolint gosec golint
@@ -26,10 +24,11 @@ const (
 type Config struct {
 	fx.Out
 
-	Logger  logger.Config
-	Consul  consul.Config
-	Api     http.Config
-	Storage storage.Config
+	Logger logger.Config
+	Consul consul.Config
+
+	Services services.Config
+	Servers  servers.Config
 }
 
 // New - create new global config.
@@ -51,7 +50,7 @@ func New(appName string, envName env.Var, configPath string, nodeName string) (C
 
 	applyEnvOnConfig(&cfg, appName)
 
-	cfg.Api.Name += "_" + nodeName
+	cfg.Servers.HTTP.Name += "_" + nodeName
 
 	// show config for debug purposes
 	// nolint forbidigo // exception of rule )
@@ -62,9 +61,8 @@ func New(appName string, envName env.Var, configPath string, nodeName string) (C
 
 func applyEnvOnConfig(cfg *Config, appName string) {
 	v := viper.New()
-	v.SetEnvPrefix(strings.ToUpper(appName))
 	v.AutomaticEnv()
 
-	cfg.Storage.Username = v.GetString(EnvNamePostgresUser)
-	cfg.Storage.Password = v.GetString(EnvNamePostgresPassword)
+	cfg.Services.Storage.Username = v.GetString(EnvNamePostgresUser)
+	cfg.Services.Storage.Password = v.GetString(EnvNamePostgresPassword)
 }

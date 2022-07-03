@@ -15,25 +15,36 @@ consul:
   dns:
     - "8.8.8.8:80"
   sessionTTL: 30s
-  periodicScanTimeout: 10s
-  waitTimeout: 30m
 
-api:
-  name: pm-http-api
-  address: :8080
-  domainName: localhost
-  allowOrigin: "*"
-  timeouts:
-    readTimeout: "60s"
-    writeTimeout: "60s"
+servers:
+  http:
+    name: pm-http-api
+    address: :8080
+    domainName: localhost
+    allowOrigin: "*"
+    timeouts:
+      readTimeout: "30s"
+      writeTimeout: "30s"
 
-storage:
-  consul_leader_key_prefix: "service/price_monitor/leader"
-  consul_slave_list_key_prefix: "service/price_monitor/slaves"
-  host: "127.0.0.1"
-  port: 5432
-  database: pm
-  options:
-    maxLifeTime: 600
-    maxIdleConn: 10
-    maxOpenConn: 10
+services:
+  storage:
+    host: "127.0.0.1"
+    port: 5432
+    database: pm
+    maxTryConnect: 3
+    timeoutTryConnect: 3s
+    options:
+      maxLifeTime: 600
+      maxIdleConn: 10
+      maxOpenConn: 10
+
+  controllers:
+    general:
+      monitor:
+        timeoutConsulLeaderCheck: "1s" # TODO define lose 1 second
+
+    master:
+      scanner:
+        timeoutOneTaskProcess: "2s" # TODO define max timeout for one task
+        intervalPeriodicScan: "1s" # TODO define max frequency for price scanner
+        cntWorkers: 1

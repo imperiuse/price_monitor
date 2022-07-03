@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"time"
 )
 
-func RealWorldExternalApi(_ context.Context) (string, error) {
+func RealWorldExternalApi(_ context.Context) (time.Time, string, error) {
 	// TODO we can simulate context.Deadline, empty response, error in http lib or other... need more context about task
-	return genRsp(), nil
+	return time.Now().UTC(), genRsp(), nil
 }
 
 func genRsp() string {

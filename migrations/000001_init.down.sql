@@ -1,7 +1,7 @@
 BEGIN;
 
-DROP TABLE IF EXISTS "btc_prices";
-DROP TABLE IF EXISTS "monitoring";
-DROP TABLE IF EXISTS "currency_info";
+DROP TABLE IF EXISTS btcusd_ppices;
+DROP TABLE IF EXISTS monitorings;
+DROP TABLE IF EXISTS currencies;
 
 COMMIT;

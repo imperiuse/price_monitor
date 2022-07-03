@@ -4,13 +4,12 @@ repos:
   hooks:
     - id: go-fmt
     - id: go-vet
-#    - id: go-imports  # todo enable later
-#    - id: go-cyclo  # todo enable later
-#      args: [-over=15]  # todo enable later
+    - id: go-cyclo
+      args: [-over=15]
     - id: validate-toml
     - id: no-go-testing
-#    - id: golangci-lint # todo enable later
-#    - id: go-critic # todo enable later
-#    - id: go-unit-tests  # todo enable later
+    - id: golangci-lint
+    - id: go-critic
+    - id: go-unit-tests
     - id: go-build
     - id: go-mod-tidy

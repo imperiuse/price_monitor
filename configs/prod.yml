@@ -1,5 +1,6 @@
 consul:
   address: "pm-consul:8500"
 
-storage:
-  host: "pm-timescaledb"
+services:
+  storage:
+    host: "pm-timescaledb"

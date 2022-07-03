@@ -23,12 +23,17 @@ docker_clean_all:
 .PHONY: start
 start:
 	@echo "Run docker-compose"
-	docker-compose -f docker-compose.yml up --scale pm-app=2
+	docker-compose -f docker-compose.yml up --force-recreate --scale pm-app=2
 
 .PHONY: stop
 stop:
 	@echo "Stop docker-compose"
 	docker-compose -f docker-compose.yml down
+
+.PHONY: rebuild
+rebuild:
+	@echo "Rebuild docker-compose"
+	docker-compose -f docker-compose.yml build --no-cache
 
 .PHONY: dev_env_up
 dev_env_up:

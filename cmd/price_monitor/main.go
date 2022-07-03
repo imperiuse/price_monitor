@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/imperiuse/price_monitor/internal/services/storage/model"
 	"math/rand"
 	"time"
 
@@ -20,8 +21,12 @@ import (
 	"github.com/imperiuse/price_monitor/internal/logger"
 	"github.com/imperiuse/price_monitor/internal/logger/field"
 	"github.com/imperiuse/price_monitor/internal/servers/http"
-	"github.com/imperiuse/price_monitor/internal/storage"
-	"github.com/imperiuse/price_monitor/internal/storage/timescaledb"
+	"github.com/imperiuse/price_monitor/internal/services/controllers"
+	"github.com/imperiuse/price_monitor/internal/services/controllers/general/monitor"
+	"github.com/imperiuse/price_monitor/internal/services/controllers/master/scanner"
+	"github.com/imperiuse/price_monitor/internal/services/market"
+	"github.com/imperiuse/price_monitor/internal/services/storage"
+	"github.com/imperiuse/price_monitor/internal/services/storage/timescaledb"
 	"github.com/imperiuse/price_monitor/internal/uuid"
 )
 
@@ -95,10 +100,15 @@ func (a *application) run() {
 				return logger.New(config, a.env, a.name, a.version)
 			},
 			consul.New,
-			timescaledb.New,
+			func(storageCfg storage.Config, logger *logger.Logger,
+			) (storage.Storage, error) {
+				return timescaledb.New(storageCfg, logger)
+			},
 			func(cfg http.Config, l *logger.Logger, s storage.Storage) (*http.Server, error) {
 				return http.New(a.env, cfg, l, s)
 			},
+			market.New,
+			scanner.New,
 		),
 		fx.Invoke(a.start),
 		fx.StartTimeout(a.startTimeout),
@@ -109,25 +119,27 @@ func (a *application) run() {
 }
 
 func (a *application) start(
+	lc fx.Lifecycle,
 	globalContext context.Context,
 	globalContextCancel context.CancelFunc,
-	lc fx.Lifecycle,
-	logger *logger.Logger,
+	controllersCfg controllers.Config,
+	log *logger.Logger,
 	consul *consul.Client,
 	storage storage.Storage,
 	httpServer *http.Server,
+	scanner *scanner.ControllerDaemon,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
-			logger.Info("starting " + a.name)
+			log.Info("starting " + a.name)
 
-			if err := consul.Register(logger, httpServer); err != nil {
-				logger.Error("error on consul registration", zap.Error(err))
+			if err := consul.Register(log, httpServer); err != nil {
+				log.Error("error on consul registration", zap.Error(err))
 
 				return fmt.Errorf("problem consul.Register: %w", err)
 			}
 
-			logger.Info("Apply migration")
+			log.Info("Apply migration")
 			// TODO use libs like goose or smth else  //	"github.com/golang-migrate/migrate/v4/source"
 
 			httpServer.Run()
@@ -135,18 +147,29 @@ func (a *application) start(
 			// todo env related stuff
 			switch a.env {
 			case env.Dev:
+				logger.LogIfError(log, "Refresh error", storage.Refresh(globalContext, []model.Table{
+					model.Monitoring{}.Repo(),
+					model.PriceTableNameGetterFunc(model.BtcUsd),
+				}),
+				)
 			case env.Stage:
 			case env.Test:
 			case env.Prod:
 			}
 
-			return nil
+			mon, err := monitor.New(a.version, controllersCfg, log, consul, storage,
+				[]controllers.DaemonController{scanner}...)
+			if err != nil {
+				return fmt.Errorf("can't create monitor: %w", err)
+			}
+
+			return mon.Run(globalContext)
 		},
 		OnStop: func(_ context.Context) error {
 			shutDownCtx, shutDownCtxCancel := context.WithTimeout(context.Background(), shutDownTimeout)
 			defer shutDownCtxCancel()
 
-			consul.Deregister(logger, httpServer)
+			consul.Deregister(log, httpServer)
 
 			httpServer.Stop(shutDownCtx)
 
@@ -154,7 +177,7 @@ func (a *application) start(
 
 			storage.Close()
 
-			logger.Info("stopped", field.Error(logger.Sync()))
+			log.Info("stopped", field.Error(log.Sync()))
 
 			return nil
 		},

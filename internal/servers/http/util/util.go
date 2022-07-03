@@ -17,6 +17,7 @@ type HTTPGoodResponse struct {
 	UUID              string `json:"uuid,omitempty"`
 	Status            string `json:"status,omitempty"`
 	Description       string `json:"description,omitempty"`
+	gin.H
 }
 
 // HTTPErrorResponse - http bad api response.

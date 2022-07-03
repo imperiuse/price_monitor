@@ -10,15 +10,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/imperiuse/price_monitor/internal/consul"
 	"github.com/imperiuse/price_monitor/internal/env"
 	"github.com/imperiuse/price_monitor/internal/helper"
 	"github.com/imperiuse/price_monitor/internal/logger"
 	"github.com/imperiuse/price_monitor/internal/logger/field"
 	mw "github.com/imperiuse/price_monitor/internal/servers/http/middlerware"
-	"github.com/imperiuse/price_monitor/internal/storage"
-
-	"github.com/gin-gonic/gin"
+	"github.com/imperiuse/price_monitor/internal/services/storage"
 	"go.uber.org/zap"
 )
 
@@ -48,6 +48,7 @@ type (
 		log       *zap.Logger
 		server    *http.Server
 		ginEngine *gin.Engine
+		storage   storage.Storage
 	}
 )
 
@@ -109,6 +110,7 @@ func New(
 			MaxHeaderBytes: 1 << 20,
 		},
 		ginEngine: e,
+		storage:   storage,
 	}
 
 	s.log.Info("starting create routes for gin s")
@@ -140,9 +142,12 @@ func New(
 
 	}
 
-	// todo fix me
-	//api := e.Group(apiPath)
-	//apiVer := e.Group(apiPathVersion)
+	apiVer := e.Group(apiPathVersion)
+
+	monitroing := apiVer.Group("/monitoring")
+
+	monitroing.GET(":id", s.GetMonitoring)
+	monitroing.POST("", s.PostMonitoring)
 
 	return s, nil
 }
@@ -185,17 +190,4 @@ func (s *Server) GetConsulServiceRegistration(cc consul.Config) *consul.Service 
 			Timeout:  cc.Timeout.String(),
 		},
 	}
-}
-
-// Health godoc
-// @Summary Health check
-// @Description health check
-// @Id Health
-// @Tags Server Base
-// @Accept  json
-// @Produce  json
-// @Success 200
-// @Router /health [get]
-func Health(c *gin.Context) {
-	c.String(http.StatusOK, "")
 }

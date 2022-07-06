@@ -32,6 +32,16 @@ ERP
 2) Be sure that your system support Makefile [more_info](https://askubuntu.com/questions/161104/how-do-i-install-make)
 3) Optional Go (for local development) [Go install](https://go.dev/doc/install)
 
+#### Create ```.env``` file in root of project
+
+And set up envs: `PM_POSTGRES_USER` and `PM_POSTGRES_PASSWORD`
+
+Like this (cat .env):
+```
+PM_POSTGRES_USER=pm
+PM_POSTGRES_PASSWORD=superpswd
+```
+
 #### Run 
 
 From root of the repository:
